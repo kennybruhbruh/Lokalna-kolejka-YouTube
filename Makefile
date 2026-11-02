@@ -1,5 +1,9 @@
 TARGET := iphone:clang:16.5:14.0
 
+# YouTube is arm64 only. A thin arm64 dylib avoids the arm64e (preview ABI) slice, which some
+# sideload signers/injectors (e.g. "arm64e fixup" steps) trip over.
+ARCHS := arm64
+
 # Build number tracking - must be before include
 BUILD_NUMBER_FILE := .build_number
 BASE_VERSION := 0.0.1
@@ -48,7 +52,10 @@ $(LIBRARY_NAME)_CFLAGS := \
 
 $(LIBRARY_NAME)_FRAMEWORKS := UIKit Foundation MediaPlayer
 $(LIBRARY_NAME)_LDFLAGS += -ObjC -Wl,-not_for_dyld_shared_cache -undefined dynamic_lookup -Wl,-undefined,dynamic_lookup
-$(LIBRARY_NAME)_INSTALL_PATH = /usr/lib
+# Install name must be @rpath/YTLocalQueue.dylib: injectors that derive the load command from the
+# dylib's own install name would otherwise point at /usr/lib/ (nonexistent on device) and the
+# tweak would silently never load.
+$(LIBRARY_NAME)_INSTALL_PATH = @rpath
 
 # For LiveContainer compatibility - no Substrate dependency
 LEAN_AND_MEAN = 1
