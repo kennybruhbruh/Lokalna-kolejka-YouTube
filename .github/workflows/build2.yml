@@ -1,6 +1,8 @@
-name: Buduj YTLocalQueue (dylib + deb)
+name: Build YTLocalQueue (dylib + deb)
 
 on:
+  push:
+    branches: [ main ]
   workflow_dispatch:
 
 env:
@@ -43,6 +45,12 @@ jobs:
           set -o pipefail
           make THEOS_PACKAGE_SCHEME=rootless SYSROOT=$THEOS/sdks/iPhoneOS13.7.sdk TARGET=iphone:13.0:13.0 all 2>&1 | tee build.log
           test -f .theos/obj/debug/YTLocalQueue.dylib
+
+      - name: Dylib info (diagnostic)
+        run: |
+          BIN=$THEOS/toolchain/linux/iphone/bin
+          for t in llvm-lipo lipo; do [ -x "$BIN/$t" ] && "$BIN/$t" -info .theos/obj/debug/YTLocalQueue.dylib && break; done || true
+          for t in llvm-otool otool; do [ -x "$BIN/$t" ] && "$BIN/$t" -D .theos/obj/debug/YTLocalQueue.dylib && break; done || true
 
       - name: Package .deb
         run: |
