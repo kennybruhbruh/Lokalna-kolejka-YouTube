@@ -1661,14 +1661,14 @@ static BOOL ytlp_setActionHandler(id action, void (^handler)(id)) {
 }
 
 // Last resort: build a brand-new action that has our handler, reusing title/icon of the native one.
-static id ytlp_makeReplacementAction(id template, void (^handler)(id)) {
+static id ytlp_makeReplacementAction(id nativeAction, void (^handler)(id)) {
     Class cls = objc_getClass("YTActionSheetAction");
     if (!cls || !handler) return nil;
 
     NSString *title = nil;
     UIImage *icon = nil;
-    @try { title = [template valueForKey:@"title"]; } @catch (__unused NSException *e) {}
-    @try { icon = [template valueForKey:@"iconImage"]; } @catch (__unused NSException *e) {}
+    @try { title = [nativeAction valueForKey:@"title"]; } @catch (__unused NSException *e) {}
+    @try { icon = [nativeAction valueForKey:@"iconImage"]; } @catch (__unused NSException *e) {}
     if (![title isKindOfClass:[NSString class]] || title.length == 0) title = @"Add to Local Queue";
     if (![icon isKindOfClass:[UIImage class]]) icon = nil;
 
