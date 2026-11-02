@@ -1,0 +1,54 @@
+name: Build YTLocalQueue
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+env:
+  THEOS: ${{ github.workspace }}/theos
+
+jobs:
+  build:
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y git curl make perl unzip xz-utils libtinfo5 dpkg
+
+      - name: Install Theos
+        run: git clone --recursive https://github.com/theos/theos.git $THEOS
+
+      - name: Download iOS SDK
+        run: |
+          curl -L https://github.com/theos/sdks/releases/download/master-146e41f/iPhoneOS13.7.sdk.tar.xz -o sdk.tar.xz
+          mkdir -p $THEOS/sdks
+          tar -xf sdk.tar.xz -C $THEOS/sdks
+
+      - name: Download iOS toolchain
+        run: |
+          curl -L https://github.com/sbingner/llvm-project/releases/download/v10.0.0-1/linux-ios-arm64e-clang-toolchain.tar.lzma -o toolchain.tar.lzma
+          mkdir -p $THEOS/toolchain/linux/iphone
+          tar -xf toolchain.tar.lzma --strip-components=1 -C $THEOS/toolchain/linux/iphone
+
+      - name: Get YouTube headers
+        run: git clone https://github.com/PoomSmart/YouTubeHeader.git ${{ github.workspace }}/Headers/YouTubeHeader
+
+      - name: Build
+        # Makefile uses macOS-style `sed -i ''`, which errors on Linux after the dylib is built
+        run: make THEOS_PACKAGE_SCHEME=rootless SYSROOT=$THEOS/sdks/iPhoneOS13.7.sdk TARGET=iphone:13.0:13.0 all || true
+
+      - name: Verify dylib exists
+        run: |
+          find .theos -name "*.dylib"
+          test -f .theos/obj/debug/YTLocalQueue.dylib
+
+      - name: Upload dylib
+        uses: actions/upload-artifact@v4
+        with:
+          name: YTLocalQueue-dylib
+          path: .theos/obj/debug/YTLocalQueue.dylib
+          include-hidden-files: true
