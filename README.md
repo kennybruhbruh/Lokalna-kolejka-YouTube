@@ -55,12 +55,14 @@ make package THEOS_PACKAGE_SCHEME=rootless
 - Naprawa: „Dodaj do kolejki” otwierało reklamę YouTube Premium, bo nowy YouTube zmienił nazwę natywnej akcji.
 - Naprawa: crash przy zmianie ustawień, spowodowany błędną sygnaturą hooka `sendActionsForControlEvents:`.
 - Hooki `setHidden:` i `setRelatedVideosVisible:` instalują się tylko raz i tylko wtedy, gdy klasa sama implementuje metodę.
+- Naprawa: przy włączonym automatycznym przechodzeniu odtwarzał się ponownie bieżący film zamiast następnego z kolejki (nieaktualne ID „pobranego” elementu).
+- Naprawa: podwójne przejście (natywny autonav + nasza nawigacja) mogło pominąć element kolejki.
 - Interfejs przetłumaczony na polski.
 
 ## Znane problemy
 
 - Przejście do następnego filmu może nie działać we wszystkich scenariuszach.
-- Wykrywanie końca filmu bywa zawodne w niektórych przypadkach brzegowych.
+- Wykrywanie końca filmu bywa zawodne w niektórych przypadkach.
 
 ## Licencja
 
