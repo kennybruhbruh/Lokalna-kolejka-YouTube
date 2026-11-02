@@ -41,8 +41,8 @@ static NSArray *ytlp_buildSectionItems(void) {
     // Auto advance toggle
     id enableAuto = ((id (*)(id, SEL, id, id, id, BOOL, BOOL(^)(id, BOOL), NSInteger))objc_msgSend)(
         SectionItemClass, selSwitch,
-        @"Auto advance",
-        @"Automatically play next item from local queue when video ends",
+        @"Automatyczne przechodzenie dalej",
+        @"Po zakończeniu filmu automatycznie odtwarzaj następny z lokalnej kolejki",
         nil,
         YTLP_AutoAdvanceEnabled(),
         ^BOOL(id cell, BOOL enabled) {
@@ -56,8 +56,8 @@ static NSArray *ytlp_buildSectionItems(void) {
     // Show Play Next button toggle
     id showPlayNext = ((id (*)(id, SEL, id, id, id, BOOL, BOOL(^)(id, BOOL), NSInteger))objc_msgSend)(
         SectionItemClass, selSwitch,
-        @"Show Play Next button",
-        @"Show the Play Next button in the video player overlay",
+        @"Pokaż przycisk następnego filmu",
+        @"Pokaż przycisk odtwarzania następnego filmu w nakładce odtwarzacza",
         nil,
         YTLP_ShowPlayNextButton(),
         ^BOOL(id cell, BOOL enabled) {
@@ -71,8 +71,8 @@ static NSArray *ytlp_buildSectionItems(void) {
     // Show Queue button toggle
     id showQueue = ((id (*)(id, SEL, id, id, id, BOOL, BOOL(^)(id, BOOL), NSInteger))objc_msgSend)(
         SectionItemClass, selSwitch,
-        @"Show Queue button",
-        @"Show the Queue button in the video player overlay",
+        @"Pokaż przycisk kolejki",
+        @"Pokaż przycisk kolejki w nakładce odtwarzacza",
         nil,
         YTLP_ShowQueueButton(),
         ^BOOL(id cell, BOOL enabled) {
@@ -86,7 +86,7 @@ static NSArray *ytlp_buildSectionItems(void) {
     SEL selItem = sel_getUid("itemWithTitle:titleDescription:accessibilityIdentifier:detailTextBlock:selectBlock:");
     id openUI = ((id (*)(id, SEL, id, id, id, id, BOOL(^)(id, NSUInteger)))objc_msgSend)(
         SectionItemClass, selItem,
-        @"Open Local Queue",
+        @"Otwórz lokalną kolejkę",
         nil,
         nil,
         nil,
@@ -106,7 +106,7 @@ static NSArray *ytlp_buildSectionItems(void) {
 
     id clear = ((id (*)(id, SEL, id, id, id, id, BOOL(^)(id, NSUInteger)))objc_msgSend)(
         SectionItemClass, selItem,
-        @"Clear Local Queue",
+        @"Wyczyść lokalną kolejkę",
         nil,
         nil,
         nil,
@@ -118,8 +118,8 @@ static NSArray *ytlp_buildSectionItems(void) {
             Class HUDMsg = objc_getClass("YTHUDMessage");
             if (HUD && HUDMsg) {
                 NSString *message = (count > 0) 
-                    ? [NSString stringWithFormat:@"Cleared %ld video%@", (long)count, count == 1 ? @"" : @"s"]
-                    : @"Queue is empty";
+                    ? [NSString stringWithFormat:@"Usunięto z kolejki: %ld", (long)count]
+                    : @"Kolejka jest pusta";
                 id hudInstance = ((id (*)(id, SEL))objc_msgSend)(HUD, sel_getUid("sharedInstance"));
                 id hudMsg = ((id (*)(id, SEL, id))objc_msgSend)(HUDMsg, sel_getUid("messageWithText:"), message);
                 if (hudInstance && hudMsg) {
@@ -134,7 +134,7 @@ static NSArray *ytlp_buildSectionItems(void) {
     // Version info - use title description to show version
     id versionItem = ((id (*)(id, SEL, id, id, id, id, BOOL(^)(id, NSUInteger)))objc_msgSend)(
         SectionItemClass, selItem,
-        [NSString stringWithFormat:@"Version %@", kYTLPVersion],
+        [NSString stringWithFormat:@"Wersja %@", kYTLPVersion],
         nil,
         nil,
         nil,
@@ -204,9 +204,9 @@ static void ytlp_updateSection(id self, SEL _cmd, NSUInteger category, id entry)
         SEL selWithIcon = sel_getUid("setSectionItems:forCategory:title:icon:titleDescription:headerHidden:");
         SEL selNoIcon   = sel_getUid("setSectionItems:forCategory:title:titleDescription:headerHidden:");
         if (delegate && [delegate respondsToSelector:selWithIcon]) {
-            ((void (*)(id, SEL, id, NSUInteger, id, id, id, BOOL))objc_msgSend)(delegate, selWithIcon, items, (NSUInteger)YTLocalQueueSection, @"Local Queue", nil, nil, NO);
+            ((void (*)(id, SEL, id, NSUInteger, id, id, id, BOOL))objc_msgSend)(delegate, selWithIcon, items, (NSUInteger)YTLocalQueueSection, @"Lokalna kolejka", nil, nil, NO);
         } else if (delegate && [delegate respondsToSelector:selNoIcon]) {
-            ((void (*)(id, SEL, id, NSUInteger, id, id, BOOL))objc_msgSend)(delegate, selNoIcon, items, (NSUInteger)YTLocalQueueSection, @"Local Queue", nil, NO);
+            ((void (*)(id, SEL, id, NSUInteger, id, id, BOOL))objc_msgSend)(delegate, selNoIcon, items, (NSUInteger)YTLocalQueueSection, @"Lokalna kolejka", nil, NO);
         }
         return;
     }

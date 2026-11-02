@@ -1,7 +1,7 @@
 Package: com.ytliteplus.localsqueue
 Name: YTLocalQueue
 Architecture: iphoneos-arm
-Description: Local queue buttons and auto-advance for YouTube
+Description: Przyciski lokalnej kolejki i automatyczne przechodzenie dalej w YouTube
 Maintainer: YTLitePlus
 Author: YTLitePlus
 Section: Tweaks

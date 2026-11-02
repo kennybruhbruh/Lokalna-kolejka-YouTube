@@ -419,7 +419,7 @@ static void ytlp_playNextFromQueue(void) {
         Class HUD = objc_getClass("GOOHUDManagerInternal");
         Class HUDMsg = objc_getClass("YTHUDMessage");
         if (HUD && HUDMsg) {
-            [[HUD sharedInstance] showMessageMainThread:[HUDMsg messageWithText:@"✓ Queue complete"]];
+            [[HUD sharedInstance] showMessageMainThread:[HUDMsg messageWithText:@"✓ Kolejka zakończona"]];
         }
         return;
     }
@@ -455,7 +455,7 @@ static void ytlp_playNextFromQueue(void) {
                 Class HUD = objc_getClass("GOOHUDManagerInternal");
                 Class HUDMsg = objc_getClass("YTHUDMessage");
                 if (HUD && HUDMsg) {
-                    [[HUD sharedInstance] showMessageMainThread:[HUDMsg messageWithText:@"⚠ Navigation failed, video re-added"]];
+                    [[HUD sharedInstance] showMessageMainThread:[HUDMsg messageWithText:@"⚠ Nie udało się przejść dalej, film dodano ponownie"]];
                 }
             } else if ([currentVideoId isEqualToString:nextId]) {
                 // Successfully navigated
@@ -480,8 +480,8 @@ static void ytlp_playNextFromQueue(void) {
             NSString *displayName = (nextTitle.length > 0) ? nextTitle : nextId;
             if (displayName.length > 40) displayName = [[displayName substringToIndex:37] stringByAppendingString:@"..."];
             NSString *message = (remaining > 0)
-                ? [NSString stringWithFormat:@"▶ %@ (%ld more)", displayName, (long)remaining]
-                : [NSString stringWithFormat:@"▶ %@ (last)", displayName];
+                ? [NSString stringWithFormat:@"▶ %@ (jeszcze %ld)", displayName, (long)remaining]
+                : [NSString stringWithFormat:@"▶ %@ (ostatni)", displayName];
             [[HUD sharedInstance] showMessageMainThread:[HUDMsg messageWithText:message]];
         }
     }
@@ -539,7 +539,7 @@ static void ytlp_playNextFromQueueForced(void) {
         Class HUD = objc_getClass("GOOHUDManagerInternal");
         Class HUDMsg = objc_getClass("YTHUDMessage");
         if (HUD && HUDMsg) {
-            [[HUD sharedInstance] showMessageMainThread:[HUDMsg messageWithText:@"✓ Queue complete"]];
+            [[HUD sharedInstance] showMessageMainThread:[HUDMsg messageWithText:@"✓ Kolejka zakończona"]];
         }
         return;
     }
@@ -563,8 +563,8 @@ static void ytlp_playNextFromQueueForced(void) {
         NSString *displayName = (nextTitle.length > 0) ? nextTitle : nextId;
         if (displayName.length > 40) displayName = [[displayName substringToIndex:37] stringByAppendingString:@"..."];
         NSString *message = (remaining > 0)
-            ? [NSString stringWithFormat:@"▶ %@ (%ld more)", displayName, (long)remaining]
-            : [NSString stringWithFormat:@"▶ %@ (last)", displayName];
+            ? [NSString stringWithFormat:@"▶ %@ (jeszcze %ld)", displayName, (long)remaining]
+            : [NSString stringWithFormat:@"▶ %@ (ostatni)", displayName];
         [[HUD sharedInstance] showMessageMainThread:[HUDMsg messageWithText:message]];
     }
 
@@ -1150,7 +1150,9 @@ static void ytlp_captureVideoTap(__unused id view, NSString *videoId, NSString *
 }
 
 // Hook UIButton actions to capture video taps
-typedef void (*UIButtonSendActionsIMP)(id, SEL, NSUInteger, id);
+// NOTE: -[UIControl sendActionsForControlEvents:] takes exactly ONE argument (controlEvents).
+// A bogus 4th "event" parameter made ARC retain a garbage register value -> EXC_BAD_ACCESS in objc_retain.
+typedef void (*UIButtonSendActionsIMP)(id, SEL, NSUInteger);
 static UIButtonSendActionsIMP origButtonSendActions = NULL;
 
 // Hook collection view cell selection to capture target videos
@@ -1159,7 +1161,7 @@ static CollectionViewCellSetSelectedIMP origCollectionViewCellSetSelected = NULL
 
 // Gesture recognizer approach disabled for now due to method signature issues
 
-static void ytlp_buttonSendActions(id self, SEL _cmd, NSUInteger controlEvents, id event) {
+static void ytlp_buttonSendActions(id self, SEL _cmd, NSUInteger controlEvents) {
     // This hook sits on UIControl, so it fires for EVERY control in the app
     // (UISwitch in Settings, text fields, ...). Keep it as cheap and safe as possible:
     // only real taps on UIButton, and never touch Settings screens.
@@ -1206,7 +1208,7 @@ static void ytlp_buttonSendActions(id self, SEL _cmd, NSUInteger controlEvents, 
 
     // Call original implementation
     if (origButtonSendActions) {
-        origButtonSendActions(self, _cmd, controlEvents, event);
+        origButtonSendActions(self, _cmd, controlEvents);
     }
 }
 
@@ -1669,7 +1671,7 @@ static id ytlp_makeReplacementAction(id nativeAction, void (^handler)(id)) {
     UIImage *icon = nil;
     @try { title = [nativeAction valueForKey:@"title"]; } @catch (__unused NSException *e) {}
     @try { icon = [nativeAction valueForKey:@"iconImage"]; } @catch (__unused NSException *e) {}
-    if (![title isKindOfClass:[NSString class]] || title.length == 0) title = @"Add to Local Queue";
+    if (![title isKindOfClass:[NSString class]] || title.length == 0) title = @"Dodaj do lokalnej kolejki";
     if (![icon isKindOfClass:[UIImage class]]) icon = nil;
 
     id h = [handler copy];
@@ -1905,10 +1907,10 @@ static NSMutableArray* ytlp_menuActionsForRenderers(id self, SEL _cmd, NSMutable
                     if (resolvedTitle.length > 0) {
                         NSString *displayName = resolvedTitle;
                         if (displayName.length > 35) displayName = [[displayName substringToIndex:32] stringByAppendingString:@"..."];
-                        if (HUD && HUDMsg) [[HUD sharedInstance] showMessageMainThread:[HUDMsg messageWithText:[NSString stringWithFormat:@"✅ Added: %@", displayName]]];
+                        if (HUD && HUDMsg) [[HUD sharedInstance] showMessageMainThread:[HUDMsg messageWithText:[NSString stringWithFormat:@"✅ Dodano: %@", displayName]]];
                     } else {
                         // Show "Adding..." toast and fetch title in background
-                        if (HUD && HUDMsg) [[HUD sharedInstance] showMessageMainThread:[HUDMsg messageWithText:@"✅ Added to queue"]];
+                        if (HUD && HUDMsg) [[HUD sharedInstance] showMessageMainThread:[HUDMsg messageWithText:@"✅ Dodano do kolejki"]];
                         
                         // Fetch title from YouTube API and update the stored item
                         NSString *capturedVideoId = [resolvedVideoId copy];
@@ -1921,7 +1923,7 @@ static NSMutableArray* ytlp_menuActionsForRenderers(id self, SEL _cmd, NSMutable
                 } else {
                     Class HUD = objc_getClass("GOOHUDManagerInternal");
                     Class HUDMsg = objc_getClass("YTHUDMessage");
-                    if (HUD && HUDMsg) [[HUD sharedInstance] showMessageMainThread:[HUDMsg messageWithText:@"❌ Failed to add video"]];
+                    if (HUD && HUDMsg) [[HUD sharedInstance] showMessageMainThread:[HUDMsg messageWithText:@"❌ Nie udało się dodać filmu"]];
                 }
             };
 
@@ -2456,7 +2458,7 @@ static void ytlp_createOverlayButtons(id controls, id target) {
         // Create "Show Queue" button (if enabled)
         if (YTLP_ShowQueueButton()) {
             UIImage *queueImg = YTLPIconQueueList();
-            id queueBtn = [controls buttonWithImage:queueImg accessibilityLabel:@"Local queue" verticalContentPadding:padding];
+            id queueBtn = [controls buttonWithImage:queueImg accessibilityLabel:@"Lokalna kolejka" verticalContentPadding:padding];
             [(UIView *)queueBtn setHidden:NO];
             [(UIView *)queueBtn setAlpha:0]; // Start invisible, will be shown by setTopOverlayVisible
             [queueBtn addTarget:target action:@selector(ytlp_showQueueTapped:) forControlEvents:UIControlEventTouchUpInside];
@@ -2478,7 +2480,7 @@ static void ytlp_createOverlayButtons(id controls, id target) {
         // Create "Next from Queue" button (if enabled)
         if (YTLP_ShowPlayNextButton()) {
             UIImage *nextImg = YTLPIconNext();
-            id nextBtn = [controls buttonWithImage:nextImg accessibilityLabel:@"Next from queue" verticalContentPadding:padding];
+            id nextBtn = [controls buttonWithImage:nextImg accessibilityLabel:@"Następny z kolejki" verticalContentPadding:padding];
             [(UIView *)nextBtn setHidden:NO];
             [(UIView *)nextBtn setAlpha:0]; // Start invisible, will be shown by setTopOverlayVisible
             [nextBtn addTarget:target action:@selector(ytlp_nextFromQueueTapped:) forControlEvents:UIControlEventTouchUpInside];
@@ -2588,10 +2590,10 @@ static void ytlp_addToQueueTapped(id self, SEL _cmd, id sender) {
         if (title.length > 0) {
             NSString *displayName = title;
             if (displayName.length > 35) displayName = [[displayName substringToIndex:32] stringByAppendingString:@"..."];
-            if (HUD && HUDMsg) [[HUD sharedInstance] showMessageMainThread:[HUDMsg messageWithText:[NSString stringWithFormat:@"✅ Added: %@", displayName]]];
+            if (HUD && HUDMsg) [[HUD sharedInstance] showMessageMainThread:[HUDMsg messageWithText:[NSString stringWithFormat:@"✅ Dodano: %@", displayName]]];
         } else {
             // Show simple toast and fetch title in background
-            if (HUD && HUDMsg) [[HUD sharedInstance] showMessageMainThread:[HUDMsg messageWithText:@"✅ Added to queue"]];
+            if (HUD && HUDMsg) [[HUD sharedInstance] showMessageMainThread:[HUDMsg messageWithText:@"✅ Dodano do kolejki"]];
             
             NSString *capturedVideoId = [videoId copy];
             ytlp_fetchTitleForVideoId(capturedVideoId, ^(NSString *fetchedTitle) {
@@ -2601,7 +2603,7 @@ static void ytlp_addToQueueTapped(id self, SEL _cmd, id sender) {
             });
         }
     } else {
-        if (HUD && HUDMsg) [[HUD sharedInstance] showMessageMainThread:[HUDMsg messageWithText:@"❌ Could not add video"]];
+        if (HUD && HUDMsg) [[HUD sharedInstance] showMessageMainThread:[HUDMsg messageWithText:@"❌ Nie można dodać filmu"]];
     }
 }
 
@@ -2625,7 +2627,7 @@ static void ytlp_nextFromQueueTapped(id self, SEL _cmd, id sender) {
     // Check if queue is empty
     if ([[YTLPLocalQueueManager shared] isEmpty]) {
         if (HUD && HUDMsg) {
-            [[HUD sharedInstance] showMessageMainThread:[HUDMsg messageWithText:@"Queue is empty"]];
+            [[HUD sharedInstance] showMessageMainThread:[HUDMsg messageWithText:@"Kolejka jest pusta"]];
         }
         return;
     }

@@ -27,8 +27,8 @@ typedef NS_ENUM(NSInteger, YTLPQueueSection) {
 
 - (void)viewDidLoad {
     [super viewDidLoad];
-    self.title = @"Local Queue";
-    self.clearButton = [[UIBarButtonItem alloc] initWithTitle:@"Clear" style:UIBarButtonItemStylePlain target:self action:@selector(clearQueue)];
+    self.title = @"Lokalna kolejka";
+    self.clearButton = [[UIBarButtonItem alloc] initWithTitle:@"Wyczyść" style:UIBarButtonItemStylePlain target:self action:@selector(clearQueue)];
     UIBarButtonItem *doneButton = [[UIBarButtonItem alloc] initWithBarButtonSystemItem:UIBarButtonSystemItemDone target:self action:@selector(dismissController)];
     self.navigationItem.leftBarButtonItem = self.clearButton;
     self.navigationItem.rightBarButtonItems = @[doneButton, self.editButtonItem];
@@ -182,8 +182,8 @@ typedef NS_ENUM(NSInteger, YTLPQueueSection) {
     Class HUDMsg = objc_getClass("YTHUDMessage");
     if (HUD && HUDMsg) {
         NSString *message = (count > 0)
-            ? [NSString stringWithFormat:@"Cleared %ld video%@", (long)count, count == 1 ? @"" : @"s"]
-            : @"Queue is empty";
+            ? [NSString stringWithFormat:@"Usunięto z kolejki: %ld", (long)count]
+            : @"Kolejka jest pusta";
         id hudInstance = ((id (*)(id, SEL))objc_msgSend)(HUD, sel_getUid("sharedInstance"));
         id hudMsg = ((id (*)(id, SEL, id))objc_msgSend)(HUDMsg, sel_getUid("messageWithText:"), message);
         if (hudInstance && hudMsg) {
@@ -208,9 +208,9 @@ typedef NS_ENUM(NSInteger, YTLPQueueSection) {
 
 - (NSString *)tableView:(UITableView *)tableView titleForHeaderInSection:(NSInteger)section {
     if (section == YTLPQueueSectionNowPlaying) {
-        return [YTLPLocalQueueManager.shared currentlyPlayingItem] ? @"Now Playing" : nil;
+        return [YTLPLocalQueueManager.shared currentlyPlayingItem] ? @"Teraz odtwarzane" : nil;
     } else {
-        return [YTLPLocalQueueManager.shared allItems].count > 0 ? @"Up Next" : nil;
+        return [YTLPLocalQueueManager.shared allItems].count > 0 ? @"Następne" : nil;
     }
 }
 
@@ -257,9 +257,9 @@ typedef NS_ENUM(NSInteger, YTLPQueueSection) {
     NSString *videoId = item[@"videoId"] ?: @"";
     NSString *channelName = item[@"channelName"] ?: @"";
 
-    cell.textLabel.text = title.length > 0 ? title : @"Loading...";
+    cell.textLabel.text = title.length > 0 ? title : @"Ładowanie...";
     if (isNowPlaying) {
-        cell.detailTextLabel.text = @"Playing now";
+        cell.detailTextLabel.text = @"Odtwarzane teraz";
         cell.detailTextLabel.textColor = [UIColor systemRedColor];
     } else {
         cell.detailTextLabel.text = channelName.length > 0 ? channelName : @"";
@@ -284,7 +284,7 @@ typedef NS_ENUM(NSInteger, YTLPQueueSection) {
 
                     UITableViewCell *updateCell = [tableView cellForRowAtIndexPath:indexPath];
                     if (updateCell) {
-                        updateCell.textLabel.text = finalTitle.length > 0 ? finalTitle : [NSString stringWithFormat:@"Video %@", capturedVideoId];
+                        updateCell.textLabel.text = finalTitle.length > 0 ? finalTitle : [NSString stringWithFormat:@"Film %@", capturedVideoId];
                         if (!capturedIsNowPlaying) {
                             updateCell.detailTextLabel.text = fetchedChannel ?: @"";
                         }
@@ -292,7 +292,7 @@ typedef NS_ENUM(NSInteger, YTLPQueueSection) {
                 } else {
                     UITableViewCell *updateCell = [tableView cellForRowAtIndexPath:indexPath];
                     if (updateCell && capturedTitle.length == 0) {
-                        updateCell.textLabel.text = [NSString stringWithFormat:@"Video %@", capturedVideoId];
+                        updateCell.textLabel.text = [NSString stringWithFormat:@"Film %@", capturedVideoId];
                     }
                 }
             });
