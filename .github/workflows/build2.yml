@@ -1,0 +1,86 @@
+name: Build YTLocalQueue (dylib + deb)
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+env:
+  THEOS: ${{ github.workspace }}/theos
+
+jobs:
+  build:
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y git curl make perl unzip xz-utils libtinfo5 dpkg
+
+      - name: Install Theos
+        run: git clone --recursive https://github.com/theos/theos.git $THEOS
+
+      - name: Download iOS SDK
+        run: |
+          curl -L https://github.com/theos/sdks/releases/download/master-146e41f/iPhoneOS13.7.sdk.tar.xz -o sdk.tar.xz
+          mkdir -p $THEOS/sdks
+          tar -xf sdk.tar.xz -C $THEOS/sdks
+
+      - name: Download iOS toolchain
+        run: |
+          curl -L https://github.com/sbingner/llvm-project/releases/download/v10.0.0-1/linux-ios-arm64e-clang-toolchain.tar.lzma -o toolchain.tar.lzma
+          mkdir -p $THEOS/toolchain/linux/iphone
+          tar -xf toolchain.tar.lzma --strip-components=1 -C $THEOS/toolchain/linux/iphone
+
+      - name: Get YouTube headers
+        run: git clone https://github.com/PoomSmart/YouTubeHeader.git ${{ github.workspace }}/Headers/YouTubeHeader
+
+      - name: Fix Makefile for Linux
+        run: sed -i "s/sed -i ''/sed -i/g" Makefile
+
+      - name: Build dylib
+        run: |
+          set -o pipefail
+          make THEOS_PACKAGE_SCHEME=rootless SYSROOT=$THEOS/sdks/iPhoneOS13.7.sdk TARGET=iphone:13.0:13.0 all 2>&1 | tee build.log
+          test -f .theos/obj/debug/YTLocalQueue.dylib
+
+      - name: Package .deb
+        run: |
+          VERSION=$(grep '^Version:' control | head -1 | sed 's/^Version:[[:space:]]*//' | tr -d '\r')
+          mkdir -p deb/DEBIAN deb/var/jb/Library/MobileSubstrate/DynamicLibraries
+          cp .theos/obj/debug/YTLocalQueue.dylib deb/var/jb/Library/MobileSubstrate/DynamicLibraries/
+          cp YTLocalQueue.plist deb/var/jb/Library/MobileSubstrate/DynamicLibraries/
+          printf '%s\n' \
+            "Package: com.ytliteplus.localsqueue" \
+            "Name: YTLocalQueue" \
+            "Version: ${VERSION}" \
+            "Architecture: iphoneos-arm64" \
+            "Description: Przyciski lokalnej kolejki i automatyczne przechodzenie dalej w YouTube" \
+            "Maintainer: YTLitePlus" \
+            "Author: YTLitePlus" \
+            "Section: Tweaks" \
+            > deb/DEBIAN/control
+          dpkg-deb -Zgzip -b deb YTLocalQueue.deb
+          dpkg-deb -c YTLocalQueue.deb
+
+      - name: Upload .deb
+        uses: actions/upload-artifact@v4
+        with:
+          name: YTLocalQueue-deb
+          path: YTLocalQueue.deb
+
+      - name: Upload dylib
+        uses: actions/upload-artifact@v4
+        with:
+          name: YTLocalQueue-dylib
+          path: .theos/obj/debug/YTLocalQueue.dylib
+          include-hidden-files: true
+
+      - name: Upload build log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-log
+          path: build.log
