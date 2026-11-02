@@ -1,8 +1,6 @@
-name: Build YTLocalQueue (dylib + deb)
+name: Buduj YTLocalQueue (dylib + deb)
 
 on:
-  push:
-    branches: [ main ]
   workflow_dispatch:
 
 env:
