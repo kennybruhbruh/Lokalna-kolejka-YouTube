@@ -65,7 +65,8 @@ static __weak id ytlp_currentAutonavController = nil;
 static NSTimeInterval ytlp_lastQueueAdvanceTime = 0;
 static NSTimeInterval ytlp_lastStateChangeTime = 0;
 static NSString *ytlp_lastPlayedVideoId = nil;
-static NSString *ytlp_currentPlayingVideoId = nil;
+static NSString *ytlp_currentPlayingVideoId = nil; // item already taken from the queue, navigation to it may still be in flight
+static NSTimeInterval ytlp_lastDirectNavTime = 0;   // last time WE navigated via command (not via YouTube's native autonav)
 static NSTimer *ytlp_endCheckTimer = nil;
 
 // Store the last tapped video info for menu operations
@@ -431,6 +432,7 @@ static void ytlp_playNextFromQueue(void) {
     ytlp_lastQueueAdvanceTime = [[NSDate date] timeIntervalSince1970];
     ytlp_lastPlayedVideoId = nextId;
     ytlp_currentPlayingVideoId = nextId;
+    ytlp_lastDirectNavTime = ytlp_lastQueueAdvanceTime;
 
     // Update currently playing for the Local Queue view
     [[YTLPLocalQueueManager shared] setCurrentlyPlayingVideoId:nextId title:nextTitle];
@@ -548,6 +550,7 @@ static void ytlp_playNextFromQueueForced(void) {
     ytlp_lastQueueAdvanceTime = [[NSDate date] timeIntervalSince1970];
     ytlp_lastPlayedVideoId = nextId;
     ytlp_currentPlayingVideoId = nextId;
+    ytlp_lastDirectNavTime = ytlp_lastQueueAdvanceTime;
 
     [[YTLPLocalQueueManager shared] setCurrentlyPlayingVideoId:nextId title:nextTitle];
 
@@ -2205,10 +2208,33 @@ static NSInteger ytlp_autonavLoopMode(id self, SEL _cmd) {
     return origAutonavLoopMode ? origAutonavLoopMode(self, _cmd) : 0;
 }
 
+// YES while an item that was already taken from the queue has not started playing yet.
+static BOOL ytlp_pendingAdvanceInFlight(NSTimeInterval window) {
+    if (ytlp_currentPlayingVideoId.length == 0) return NO;
+    NSTimeInterval age = [[NSDate date] timeIntervalSince1970] - ytlp_lastQueueAdvanceTime;
+    if (age > window) return NO;
+    NSString *cur = ytlp_getCurrentVideoId();
+    return !(cur.length > 0 && [cur isEqualToString:ytlp_currentPlayingVideoId]);
+}
+
+// YES when we already started navigating to the next queue item ourselves, so YouTube's own
+// autonav must not navigate a second time (that restarted the same video / skipped an item).
+static BOOL ytlp_directNavInFlight(void) {
+    if (ytlp_lastDirectNavTime <= 0) return NO;
+    if ([[NSDate date] timeIntervalSince1970] - ytlp_lastDirectNavTime > 5.0) return NO;
+    return ytlp_pendingAdvanceInFlight(5.0);
+}
+
 // Helper to consume queue item and let YouTube's autonav handle the actual playback
 // This avoids waking the screen by using YouTube's native background transition
 static BOOL ytlp_consumeQueueForAutonav(void) {
     if (!YTLP_AutoAdvanceEnabled() || [[YTLPLocalQueueManager shared] isEmpty]) {
+        return NO;
+    }
+
+    // Never take a second item while the previous one is still being navigated to
+    // (playNext/playAutonav/playAutoplay can all fire for a single transition).
+    if (ytlp_pendingAdvanceInFlight(5.0)) {
         return NO;
     }
 
@@ -2236,6 +2262,7 @@ static BOOL ytlp_consumeQueueForAutonav(void) {
 
 // Intercept playNext to inject queue video
 static void ytlp_autonavPlayNext(id self, SEL _cmd) {
+    if (ytlp_directNavInFlight()) return; // already navigating to the queue item
     #if DEBUG
     NSLog(@"[YTLocalQueue] YTAutoplayAutonavController.playNext called");
     #endif
@@ -2250,6 +2277,7 @@ static void ytlp_autonavPlayNext(id self, SEL _cmd) {
 
 // Intercept playAutonav (auto-advance to next video)
 static void ytlp_autonavPlayAutonav(id self, SEL _cmd) {
+    if (ytlp_directNavInFlight()) return; // already navigating to the queue item
     #if DEBUG
     NSLog(@"[YTLocalQueue] YTAutoplayAutonavController.playAutonav called");
     #endif
@@ -2263,6 +2291,7 @@ static void ytlp_autonavPlayAutonav(id self, SEL _cmd) {
 
 // Intercept playAutoplay
 static void ytlp_autonavPlayAutoplay(id self, SEL _cmd) {
+    if (ytlp_directNavInFlight()) return; // already navigating to the queue item
     #if DEBUG
     NSLog(@"[YTLocalQueue] YTAutoplayAutonavController.playAutoplay called");
     #endif
@@ -2289,12 +2318,21 @@ static id ytlp_createQueueEndpoint(NSString *videoId) {
 static NSString *ytlp_getNextQueueVideoId(void) {
     if (!YTLP_AutoAdvanceEnabled()) return nil;
 
-    // First priority: consumed video ID
+    NSString *current = ytlp_getCurrentVideoId();
+
+    // First priority: an item that was already taken from the queue and is being navigated to.
+    // It must never outlive the navigation: once it IS the playing video (or after a timeout),
+    // it is stale. Returning it then makes YouTube replay the current video instead of the next one.
     if (ytlp_currentPlayingVideoId.length > 0) {
-        return ytlp_currentPlayingVideoId;
+        BOOL alreadyPlaying = (current.length > 0 && [current isEqualToString:ytlp_currentPlayingVideoId]);
+        BOOL fresh = ([[NSDate date] timeIntervalSince1970] - ytlp_lastQueueAdvanceTime) < 15.0;
+        if (fresh && !alreadyPlaying) {
+            return ytlp_currentPlayingVideoId;
+        }
+        ytlp_currentPlayingVideoId = nil;
     }
 
-    // Second priority: peek at queue
+    // Second priority: peek at the queue. Fall back to YouTube's own choice when it is empty.
     if (![[YTLPLocalQueueManager shared] isEmpty]) {
         NSDictionary *nextItem = [[YTLPLocalQueueManager shared] peekNextItem];
         return nextItem[@"videoId"];
