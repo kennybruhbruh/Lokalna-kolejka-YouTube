@@ -1,0 +1,27 @@
+name: Check translations
+
+on:
+  push:
+    paths:
+      - 'Localization/**'
+      - 'tools/translations.py'
+      - '*.xm'
+      - '*.m'
+  pull_request:
+    paths:
+      - 'Localization/**'
+      - 'tools/translations.py'
+      - '*.xm'
+      - '*.m'
+  workflow_dispatch:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+      - name: Check translation files
+        run: python3 tools/translations.py check
