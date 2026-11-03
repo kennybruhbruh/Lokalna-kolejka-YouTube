@@ -1722,7 +1722,7 @@ static NSString *ytlp_descriptionOfObject(id obj) {
     return [d isKindOfClass:[NSString class]] ? d : nil;
 }
 
-static BOOL ytlp_looksLikeVideoId(NSString *s) {
+static BOOL ytlp_looksLikeMenuVideoId(NSString *s) {
     if (s.length != 11) return NO;
     BOOL hasLower = [s rangeOfCharacterFromSet:[NSCharacterSet lowercaseLetterCharacterSet]].location != NSNotFound;
     BOOL hasUpper = [s rangeOfCharacterFromSet:[NSCharacterSet uppercaseLetterCharacterSet]].location != NSNotFound;
@@ -1762,7 +1762,7 @@ static NSString *ytlp_videoIdFromMenuRenderers(NSArray *renderers) {
         }
         for (NSTextCheckingResult *m in [quotedRegex matchesInString:desc options:0 range:full]) {
             NSString *vid = [desc substringWithRange:[m rangeAtIndex:1]];
-            if (!ytlp_looksLikeVideoId(vid)) continue;
+            if (!ytlp_looksLikeMenuVideoId(vid)) continue;
             looseVotes[vid] = @([looseVotes[vid] integerValue] + 1);
         }
     }
