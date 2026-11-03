@@ -1,0 +1,42 @@
+/* Polski (pl). Tłumaczenie interfejsu YTLocalQueue.
+   Zasady: zmieniaj tylko wartość po znaku =, zostaw klucz, znaki %@ i %ld oraz kolejność argumentów. */
+
+/* ---- Settings.xm ---- */
+"Auto advance" = "Automatyczne przechodzenie dalej";
+"Automatically play next item from local queue when video ends" = "Po zakończeniu filmu automatycznie odtwarzaj następny z lokalnej kolejki";
+"Show Play Next button" = "Pokaż przycisk następnego filmu";
+"Show the Play Next button in the video player overlay" = "Pokaż przycisk odtwarzania następnego filmu w nakładce odtwarzacza";
+"Show Queue button" = "Pokaż przycisk kolejki";
+"Show the Queue button in the video player overlay" = "Pokaż przycisk kolejki w nakładce odtwarzacza";
+"Diagnostics: copy menu data on error" = "Diagnostyka: kopiuj dane menu przy błędzie";
+"When a video can't be determined while adding to the queue, copy the menu data to the clipboard (for bug reports)" = "Gdy nie uda się ustalić filmu przy dodawaniu do kolejki, skopiuj dane menu do schowka (do zgłoszenia błędu)";
+"Open Local Queue" = "Otwórz lokalną kolejkę";
+"Clear Local Queue" = "Wyczyść lokalną kolejkę";
+"Removed from queue: %ld" = "Usunięto z kolejki: %ld";
+"Queue is empty" = "Kolejka jest pusta";
+"Version %@" = "Wersja %@";
+"Local Queue" = "Lokalna kolejka";
+
+/* ---- Tweak.xm ---- */
+"✓ Queue complete" = "✓ Kolejka zakończona";
+"⚠ Navigation failed, video re-added" = "⚠ Nie udało się przejść dalej, film dodano ponownie";
+"▶ %@ (%ld more)" = "▶ %@ (jeszcze %ld)";
+"▶ %@ (last)" = "▶ %@ (ostatni)";
+/* NOT UI text. YouTube's own label(s) for its "add to queue" menu action in YOUR language,
+   lowercase, separated by | . The tweak uses it to find and replace that menu entry. */
+"ytlp.native-queue-action-titles" = "dodaj do kolejki|do kolejki|w kolejce|jako następny";
+"Add to Local Queue" = "Dodaj do lokalnej kolejki";
+"✅ Added: %@" = "✅ Dodano: %@";
+"✅ Added to queue" = "✅ Dodano do kolejki";
+"❌ Could not determine the video (menu data copied to clipboard)" = "❌ Nie udało się ustalić filmu (dane menu skopiowane do schowka)";
+"❌ Could not determine the video" = "❌ Nie udało się ustalić filmu";
+"Next from queue" = "Następny z kolejki";
+"❌ Could not add video" = "❌ Nie można dodać filmu";
+
+/* ---- LocalQueueViewController.m ---- */
+"Clear" = "Wyczyść";
+"Now Playing" = "Teraz odtwarzane";
+"Up Next" = "Następne";
+"Loading..." = "Ładowanie...";
+"Playing now" = "Odtwarzane teraz";
+"Video %@" = "Film %@";
