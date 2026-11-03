@@ -37,11 +37,16 @@ update-build-number:
 # Build a single dlopen-friendly dylib (no Substrate), containing both settings and tweak logic
 LIBRARY_NAME := YTLocalQueue
 
+# Embed Localization/*.strings into the dylib (a sideloaded tweak has no resource bundle).
+# Needs python3; without it the tweak simply builds English-only. See TRANSLATING.md.
+_YTLP_TRANSLATIONS := $(shell python3 tools/translations.py generate || true)
+
 $(LIBRARY_NAME)_FILES := \
     Settings.xm \
     Tweak.xm \
     LocalQueueManager.m \
-    LocalQueueViewController.m
+    LocalQueueViewController.m \
+    YTLPLocalization.m
 
 $(LIBRARY_NAME)_CFLAGS := \
     -fobjc-arc \

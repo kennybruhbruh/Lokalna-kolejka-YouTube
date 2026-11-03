@@ -12,3 +12,8 @@ Headers/
 # Documentation (except README)
 *.md
 !README.md
+!TRANSLATING.md
+!README.en.md
+
+# Generated from Localization/*.strings at build time
+YTLPTranslations.generated.h

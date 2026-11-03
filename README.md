@@ -51,13 +51,17 @@ make package THEOS_PACKAGE_SCHEME=rootless
 
 ## Historia zmian
 
-### 0.0.2
+### 0.0.3
 - Naprawa: „Dodaj do kolejki” otwierało reklamę YouTube Premium, bo nowy YouTube zmienił nazwę natywnej akcji.
 - Naprawa: crash przy zmianie ustawień, spowodowany błędną sygnaturą hooka `sendActionsForControlEvents:`.
 - Hooki `setHidden:` i `setRelatedVideosVisible:` instalują się tylko raz i tylko wtedy, gdy klasa sama implementuje metodę.
 - Naprawa: przy włączonym automatycznym przechodzeniu odtwarzał się ponownie bieżący film zamiast następnego z kolejki (nieaktualne ID „pobranego” elementu).
 - Naprawa: podwójne przejście (natywny autonav + nasza nawigacja) mogło pominąć element kolejki.
+- Naprawa: dodawanie do kolejki z niektórych miejsc (np. zakładka „Wideo” kanału) kończyło się błędem albo dodawało film, który właśnie oglądasz. ID filmu jest teraz odczytywane z danych samego menu, a gdy się nie da, tweak nie dodaje już bieżącego filmu „na ślepo”.
+- Nowość: opcja „Diagnostyka” w ustawieniach kopiuje dane menu do schowka, gdy nie uda się ustalić filmu.
+- Dylib jest budowany tylko dla arm64, z install name `@rpath/YTLocalQueue.dylib` (lepsza zgodność z injectorami w Feather/FlareStore).
 - Interfejs przetłumaczony na polski.
+- Nowość: system tłumaczeń. Napisy są w `Localization/*.strings` i wbudowywane w dylib podczas budowania; każdy może dodać własny język (patrz TRANSLATING.md). Polski jest pierwszym tłumaczeniem.
 
 ## Znane problemy
 

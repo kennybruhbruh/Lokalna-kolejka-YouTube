@@ -34,6 +34,7 @@
 #import "Headers/YouTubeHeader/YTCollectionViewCell.h"
 
 #import "LocalQueueManager.h"
+#import "YTLPLocalization.h"
 #import "LocalQueueViewController.h"
 #import <objc/runtime.h>
 
@@ -420,7 +421,7 @@ static void ytlp_playNextFromQueue(void) {
         Class HUD = objc_getClass("GOOHUDManagerInternal");
         Class HUDMsg = objc_getClass("YTHUDMessage");
         if (HUD && HUDMsg) {
-            [[HUD sharedInstance] showMessageMainThread:[HUDMsg messageWithText:@"✓ Kolejka zakończona"]];
+            [[HUD sharedInstance] showMessageMainThread:[HUDMsg messageWithText:YTLPLocalizedString(@"✓ Queue complete")]];
         }
         return;
     }
@@ -457,7 +458,7 @@ static void ytlp_playNextFromQueue(void) {
                 Class HUD = objc_getClass("GOOHUDManagerInternal");
                 Class HUDMsg = objc_getClass("YTHUDMessage");
                 if (HUD && HUDMsg) {
-                    [[HUD sharedInstance] showMessageMainThread:[HUDMsg messageWithText:@"⚠ Nie udało się przejść dalej, film dodano ponownie"]];
+                    [[HUD sharedInstance] showMessageMainThread:[HUDMsg messageWithText:YTLPLocalizedString(@"⚠ Navigation failed, video re-added")]];
                 }
             } else if ([currentVideoId isEqualToString:nextId]) {
                 // Successfully navigated
@@ -482,8 +483,8 @@ static void ytlp_playNextFromQueue(void) {
             NSString *displayName = (nextTitle.length > 0) ? nextTitle : nextId;
             if (displayName.length > 40) displayName = [[displayName substringToIndex:37] stringByAppendingString:@"..."];
             NSString *message = (remaining > 0)
-                ? [NSString stringWithFormat:@"▶ %@ (jeszcze %ld)", displayName, (long)remaining]
-                : [NSString stringWithFormat:@"▶ %@ (ostatni)", displayName];
+                ? [NSString stringWithFormat:YTLPLocalizedString(@"▶ %@ (%ld more)"), displayName, (long)remaining]
+                : [NSString stringWithFormat:YTLPLocalizedString(@"▶ %@ (last)"), displayName];
             [[HUD sharedInstance] showMessageMainThread:[HUDMsg messageWithText:message]];
         }
     }
@@ -541,7 +542,7 @@ static void ytlp_playNextFromQueueForced(void) {
         Class HUD = objc_getClass("GOOHUDManagerInternal");
         Class HUDMsg = objc_getClass("YTHUDMessage");
         if (HUD && HUDMsg) {
-            [[HUD sharedInstance] showMessageMainThread:[HUDMsg messageWithText:@"✓ Kolejka zakończona"]];
+            [[HUD sharedInstance] showMessageMainThread:[HUDMsg messageWithText:YTLPLocalizedString(@"✓ Queue complete")]];
         }
         return;
     }
@@ -566,8 +567,8 @@ static void ytlp_playNextFromQueueForced(void) {
         NSString *displayName = (nextTitle.length > 0) ? nextTitle : nextId;
         if (displayName.length > 40) displayName = [[displayName substringToIndex:37] stringByAppendingString:@"..."];
         NSString *message = (remaining > 0)
-            ? [NSString stringWithFormat:@"▶ %@ (jeszcze %ld)", displayName, (long)remaining]
-            : [NSString stringWithFormat:@"▶ %@ (ostatni)", displayName];
+            ? [NSString stringWithFormat:YTLPLocalizedString(@"▶ %@ (%ld more)"), displayName, (long)remaining]
+            : [NSString stringWithFormat:YTLPLocalizedString(@"▶ %@ (last)"), displayName];
         [[HUD sharedInstance] showMessageMainThread:[HUDMsg messageWithText:message]];
     }
 
@@ -1632,6 +1633,15 @@ static BOOL ytlp_isNativeQueueTitle(NSString *title) {
     for (NSString *needle in needles) {
         if ([t containsString:needle]) return YES;
     }
+
+    // Labels supplied by the active translation (the app's own label for this action, '|'-separated)
+    NSString *custom = YTLPLocalizedString(@"ytlp.native-queue-action-titles");
+    if (![custom isEqualToString:@"ytlp.native-queue-action-titles"]) {
+        for (NSString *part in [custom componentsSeparatedByString:@"|"]) {
+            NSString *needle = [[part stringByTrimmingCharactersInSet:[NSCharacterSet whitespaceCharacterSet]] lowercaseString];
+            if (needle.length > 2 && [t containsString:needle]) return YES;
+        }
+    }
     return NO;
 }
 
@@ -1674,7 +1684,7 @@ static id ytlp_makeReplacementAction(id nativeAction, void (^handler)(id)) {
     UIImage *icon = nil;
     @try { title = [nativeAction valueForKey:@"title"]; } @catch (__unused NSException *e) {}
     @try { icon = [nativeAction valueForKey:@"iconImage"]; } @catch (__unused NSException *e) {}
-    if (![title isKindOfClass:[NSString class]] || title.length == 0) title = @"Dodaj do lokalnej kolejki";
+    if (![title isKindOfClass:[NSString class]] || title.length == 0) title = YTLPLocalizedString(@"Add to Local Queue");
     if (![icon isKindOfClass:[UIImage class]]) icon = nil;
 
     id h = [handler copy];
@@ -1692,6 +1702,100 @@ static id ytlp_makeReplacementAction(id nativeAction, void (^handler)(id)) {
         return ((id (*)(id, SEL, id, id, id, id, BOOL, id, id))objc_msgSend)(cls, s3, title, nil, icon, nil, NO, @"ytlp_add_to_queue", h);
     }
     return nil;
+}
+
+
+// ============================================================================
+// EXACT MENU VIDEO ID (read from the menu's own renderers)
+// ============================================================================
+// The renderers passed to -actionsForRenderers: describe exactly the video the menu was opened
+// for (queue/playlist/share endpoints all carry its id). They are GPB messages, which the generic
+// object-graph scanner deliberately skips, so read them through -description instead.
+
+static BOOL YTLP_DiagnosticsEnabled(void) {
+    return [[NSUserDefaults standardUserDefaults] boolForKey:@"ytlp_diagnostics_enabled"];
+}
+
+static NSString *ytlp_descriptionOfObject(id obj) {
+    NSString *d = nil;
+    @try { d = [obj description]; } @catch (__unused NSException *e) {}
+    return [d isKindOfClass:[NSString class]] ? d : nil;
+}
+
+static BOOL ytlp_looksLikeVideoId(NSString *s) {
+    if (s.length != 11) return NO;
+    BOOL hasLower = [s rangeOfCharacterFromSet:[NSCharacterSet lowercaseLetterCharacterSet]].location != NSNotFound;
+    BOOL hasUpper = [s rangeOfCharacterFromSet:[NSCharacterSet uppercaseLetterCharacterSet]].location != NSNotFound;
+    BOOL hasDigit = [s rangeOfCharacterFromSet:[NSCharacterSet decimalDigitCharacterSet]].location != NSNotFound;
+    return hasLower && (hasUpper || hasDigit);
+}
+
+static NSString *ytlp_videoIdFromMenuRenderers(NSArray *renderers) {
+    if (![renderers isKindOfClass:[NSArray class]] || renderers.count == 0) return nil;
+
+    static NSRegularExpression *namedRegex = nil;
+    static NSRegularExpression *quotedRegex = nil;
+    static dispatch_once_t onceToken;
+    dispatch_once(&onceToken, ^{
+        namedRegex = [NSRegularExpression regularExpressionWithPattern:@"video_?id[\"']?\\s*[:=]\\s*[\"']?([A-Za-z0-9_-]{11})(?![A-Za-z0-9_-])"
+                                                               options:NSRegularExpressionCaseInsensitive
+                                                                 error:nil];
+        quotedRegex = [NSRegularExpression regularExpressionWithPattern:@"\"([A-Za-z0-9_-]{11})\""
+                                                                options:0
+                                                                  error:nil];
+    });
+    if (!namedRegex || !quotedRegex) return nil;
+
+    NSMutableDictionary<NSString *, NSNumber *> *votes = [NSMutableDictionary dictionary];
+    NSMutableDictionary<NSString *, NSNumber *> *looseVotes = [NSMutableDictionary dictionary];
+
+    for (id renderer in renderers) {
+        NSString *desc = ytlp_descriptionOfObject(renderer);
+        if (desc.length == 0) continue;
+        // The renderer of the queue action itself is the most trustworthy one
+        NSInteger weight = ([desc rangeOfString:@"queue" options:NSCaseInsensitiveSearch].location != NSNotFound) ? 3 : 1;
+        NSRange full = NSMakeRange(0, desc.length);
+
+        for (NSTextCheckingResult *m in [namedRegex matchesInString:desc options:0 range:full]) {
+            NSString *vid = [desc substringWithRange:[m rangeAtIndex:1]];
+            votes[vid] = @([votes[vid] integerValue] + weight);
+        }
+        for (NSTextCheckingResult *m in [quotedRegex matchesInString:desc options:0 range:full]) {
+            NSString *vid = [desc substringWithRange:[m rangeAtIndex:1]];
+            if (!ytlp_looksLikeVideoId(vid)) continue;
+            looseVotes[vid] = @([looseVotes[vid] integerValue] + 1);
+        }
+    }
+
+    NSString *best = nil;
+    NSInteger bestScore = 0;
+    for (NSString *vid in votes) {
+        NSInteger n = [votes[vid] integerValue];
+        if (n > bestScore) { best = vid; bestScore = n; }
+    }
+    if (best) return best;
+
+    // Field names may be stripped in release builds: fall back to quoted 11-char ids that repeat
+    for (NSString *vid in looseVotes) {
+        NSInteger n = [looseVotes[vid] integerValue];
+        if (n >= 2 && n > bestScore) { best = vid; bestScore = n; }
+    }
+    return best;
+}
+
+static void ytlp_copyMenuDebugToPasteboard(NSArray *renderers, id entry, id fromView) {
+    NSMutableString *dump = [NSMutableString stringWithString:@"YTLocalQueue menu debug\n"];
+    [dump appendFormat:@"renderers: %lu, entry: %@, fromView: %@\n",
+        (unsigned long)([renderers isKindOfClass:[NSArray class]] ? renderers.count : 0),
+        NSStringFromClass([entry class]), NSStringFromClass([fromView class])];
+    NSUInteger idx = 0;
+    for (id r in renderers) {
+        NSString *d = ytlp_descriptionOfObject(r) ?: @"(no description)";
+        if (d.length > 2500) d = [[d substringToIndex:2500] stringByAppendingString:@" ...[cut]"];
+        [dump appendFormat:@"\n--- #%lu %@ ---\n%@\n", (unsigned long)idx++, NSStringFromClass([r class]), d];
+        if (dump.length > 24000) break;
+    }
+    [UIPasteboard generalPasteboard].string = dump;
 }
 
 typedef NSMutableArray* (*MenuActionsForRenderersIMP)(id, SEL, NSMutableArray*, UIView*, id, BOOL, id);
@@ -1818,6 +1922,8 @@ static NSMutableArray* ytlp_menuActionsForRenderers(id self, SEL _cmd, NSMutable
             NSString *title = nil;
 
             NSString *renderersVideoId = ytlp_findVideoIdInRenderers(renderers, currentVideoId);
+            // Exact id of the video this menu belongs to (preferred over every heuristic below)
+            NSString *exactVideoId = ytlp_videoIdFromMenuRenderers(renderers);
             
             if (hasRecentTap && ytlp_lastTappedVideoId.length > 0) {
                 videoId = ytlp_lastTappedVideoId;
@@ -1839,7 +1945,7 @@ static NSMutableArray* ytlp_menuActionsForRenderers(id self, SEL _cmd, NSMutable
             }
 
             // Cache menu context for handler-time resolution.
-            NSString *cacheCandidate = menuContextVideoId.length > 0 ? menuContextVideoId : renderersVideoId;
+            NSString *cacheCandidate = exactVideoId.length > 0 ? exactVideoId : (menuContextVideoId.length > 0 ? menuContextVideoId : renderersVideoId);
             if (cacheCandidate.length > 0) {
                 ytlp_lastMenuContextVideoId = [cacheCandidate copy];
                 ytlp_lastMenuContextTitle = [menuContextTitle copy];
@@ -1850,21 +1956,29 @@ static NSMutableArray* ytlp_menuActionsForRenderers(id self, SEL _cmd, NSMutable
             void (^newHandler)(id) = ^(id a){
                 
                 NSString *currentVideoIdNow = ytlp_getCurrentVideoId();
-                // Re-resolve at tap time to avoid stale/current-video captures.
-                NSString *resolvedVideoId = ytlp_resolveMenuVideoId(a, renderers, fromView, entry, self, currentVideoIdNow);
+                NSString *resolvedVideoId = exactVideoId;
                 NSString *resolvedTitle = title; // Start with captured title
-                
-                if (resolvedVideoId.length == 0 || [resolvedVideoId isEqualToString:currentVideoIdNow]) {
-                    // Fall back to precomputed value if it's not current, otherwise keep as last resort.
-                    if (videoId.length > 0 && ![videoId isEqualToString:currentVideoIdNow]) {
-                        resolvedVideoId = videoId;
-                    } else {
-                        resolvedVideoId = videoId;
+                BOOL exact = (resolvedVideoId.length > 0);
+
+                if (exact) {
+                    // The captured title may belong to a different video than the exact id
+                    if (![resolvedVideoId isEqualToString:videoId]) resolvedTitle = nil;
+                } else {
+                    // Heuristic path (no usable data in the menu renderers)
+                    resolvedVideoId = ytlp_resolveMenuVideoId(a, renderers, fromView, entry, self, currentVideoIdNow);
+                    if (resolvedVideoId.length == 0 || [resolvedVideoId isEqualToString:currentVideoIdNow]) {
+                        if (videoId.length > 0 && ![videoId isEqualToString:currentVideoIdNow]) {
+                            resolvedVideoId = videoId;
+                        } else {
+                            // Only the currently playing video is left: that is almost certainly a wrong
+                            // guess (it used to put the playing video into the queue), so refuse instead.
+                            resolvedVideoId = nil;
+                        }
                     }
                 }
-                
+
                 // If we don't have a title, try to extract it from the entry or renderers
-                if (resolvedTitle.length == 0 && entry) {
+                if (resolvedTitle.length == 0 && !exact && entry) {
                     NSString *extractedId = nil;
                     NSString *extractedTitle = nil;
                     ytlp_extractVideoInfo(entry, &extractedId, &extractedTitle);
@@ -1874,7 +1988,7 @@ static NSMutableArray* ytlp_menuActionsForRenderers(id self, SEL _cmd, NSMutable
                 }
                 
                 // Try renderers for title if still not found
-                if (resolvedTitle.length == 0 && renderers.count > 0) {
+                if (resolvedTitle.length == 0 && !exact && renderers.count > 0) {
                     for (id renderer in renderers) {
                         NSString *extractedId = nil;
                         NSString *extractedTitle = nil;
@@ -1887,7 +2001,7 @@ static NSMutableArray* ytlp_menuActionsForRenderers(id self, SEL _cmd, NSMutable
                 }
                 
                 // Try menu context title as fallback
-                if (resolvedTitle.length == 0 && ytlp_lastMenuContextTitle.length > 0) {
+                if (resolvedTitle.length == 0 && !exact && ytlp_lastMenuContextTitle.length > 0) {
                     resolvedTitle = ytlp_lastMenuContextTitle;
                 }
                 
@@ -1910,10 +2024,10 @@ static NSMutableArray* ytlp_menuActionsForRenderers(id self, SEL _cmd, NSMutable
                     if (resolvedTitle.length > 0) {
                         NSString *displayName = resolvedTitle;
                         if (displayName.length > 35) displayName = [[displayName substringToIndex:32] stringByAppendingString:@"..."];
-                        if (HUD && HUDMsg) [[HUD sharedInstance] showMessageMainThread:[HUDMsg messageWithText:[NSString stringWithFormat:@"✅ Dodano: %@", displayName]]];
+                        if (HUD && HUDMsg) [[HUD sharedInstance] showMessageMainThread:[HUDMsg messageWithText:[NSString stringWithFormat:YTLPLocalizedString(@"✅ Added: %@"), displayName]]];
                     } else {
                         // Show "Adding..." toast and fetch title in background
-                        if (HUD && HUDMsg) [[HUD sharedInstance] showMessageMainThread:[HUDMsg messageWithText:@"✅ Dodano do kolejki"]];
+                        if (HUD && HUDMsg) [[HUD sharedInstance] showMessageMainThread:[HUDMsg messageWithText:YTLPLocalizedString(@"✅ Added to queue")]];
                         
                         // Fetch title from YouTube API and update the stored item
                         NSString *capturedVideoId = [resolvedVideoId copy];
@@ -1926,7 +2040,10 @@ static NSMutableArray* ytlp_menuActionsForRenderers(id self, SEL _cmd, NSMutable
                 } else {
                     Class HUD = objc_getClass("GOOHUDManagerInternal");
                     Class HUDMsg = objc_getClass("YTHUDMessage");
-                    if (HUD && HUDMsg) [[HUD sharedInstance] showMessageMainThread:[HUDMsg messageWithText:@"❌ Nie udało się dodać filmu"]];
+                    BOOL diag = YTLP_DiagnosticsEnabled();
+                    if (diag) ytlp_copyMenuDebugToPasteboard(renderers, entry, fromView);
+                    NSString *failText = diag ? YTLPLocalizedString(@"❌ Could not determine the video (menu data copied to clipboard)") : YTLPLocalizedString(@"❌ Could not determine the video");
+                    if (HUD && HUDMsg) [[HUD sharedInstance] showMessageMainThread:[HUDMsg messageWithText:failText]];
                 }
             };
 
@@ -2496,7 +2613,7 @@ static void ytlp_createOverlayButtons(id controls, id target) {
         // Create "Show Queue" button (if enabled)
         if (YTLP_ShowQueueButton()) {
             UIImage *queueImg = YTLPIconQueueList();
-            id queueBtn = [controls buttonWithImage:queueImg accessibilityLabel:@"Lokalna kolejka" verticalContentPadding:padding];
+            id queueBtn = [controls buttonWithImage:queueImg accessibilityLabel:YTLPLocalizedString(@"Local Queue") verticalContentPadding:padding];
             [(UIView *)queueBtn setHidden:NO];
             [(UIView *)queueBtn setAlpha:0]; // Start invisible, will be shown by setTopOverlayVisible
             [queueBtn addTarget:target action:@selector(ytlp_showQueueTapped:) forControlEvents:UIControlEventTouchUpInside];
@@ -2518,7 +2635,7 @@ static void ytlp_createOverlayButtons(id controls, id target) {
         // Create "Next from Queue" button (if enabled)
         if (YTLP_ShowPlayNextButton()) {
             UIImage *nextImg = YTLPIconNext();
-            id nextBtn = [controls buttonWithImage:nextImg accessibilityLabel:@"Następny z kolejki" verticalContentPadding:padding];
+            id nextBtn = [controls buttonWithImage:nextImg accessibilityLabel:YTLPLocalizedString(@"Next from queue") verticalContentPadding:padding];
             [(UIView *)nextBtn setHidden:NO];
             [(UIView *)nextBtn setAlpha:0]; // Start invisible, will be shown by setTopOverlayVisible
             [nextBtn addTarget:target action:@selector(ytlp_nextFromQueueTapped:) forControlEvents:UIControlEventTouchUpInside];
@@ -2628,10 +2745,10 @@ static void ytlp_addToQueueTapped(id self, SEL _cmd, id sender) {
         if (title.length > 0) {
             NSString *displayName = title;
             if (displayName.length > 35) displayName = [[displayName substringToIndex:32] stringByAppendingString:@"..."];
-            if (HUD && HUDMsg) [[HUD sharedInstance] showMessageMainThread:[HUDMsg messageWithText:[NSString stringWithFormat:@"✅ Dodano: %@", displayName]]];
+            if (HUD && HUDMsg) [[HUD sharedInstance] showMessageMainThread:[HUDMsg messageWithText:[NSString stringWithFormat:YTLPLocalizedString(@"✅ Added: %@"), displayName]]];
         } else {
             // Show simple toast and fetch title in background
-            if (HUD && HUDMsg) [[HUD sharedInstance] showMessageMainThread:[HUDMsg messageWithText:@"✅ Dodano do kolejki"]];
+            if (HUD && HUDMsg) [[HUD sharedInstance] showMessageMainThread:[HUDMsg messageWithText:YTLPLocalizedString(@"✅ Added to queue")]];
             
             NSString *capturedVideoId = [videoId copy];
             ytlp_fetchTitleForVideoId(capturedVideoId, ^(NSString *fetchedTitle) {
@@ -2641,7 +2758,7 @@ static void ytlp_addToQueueTapped(id self, SEL _cmd, id sender) {
             });
         }
     } else {
-        if (HUD && HUDMsg) [[HUD sharedInstance] showMessageMainThread:[HUDMsg messageWithText:@"❌ Nie można dodać filmu"]];
+        if (HUD && HUDMsg) [[HUD sharedInstance] showMessageMainThread:[HUDMsg messageWithText:YTLPLocalizedString(@"❌ Could not add video")]];
     }
 }
 
@@ -2665,7 +2782,7 @@ static void ytlp_nextFromQueueTapped(id self, SEL _cmd, id sender) {
     // Check if queue is empty
     if ([[YTLPLocalQueueManager shared] isEmpty]) {
         if (HUD && HUDMsg) {
-            [[HUD sharedInstance] showMessageMainThread:[HUDMsg messageWithText:@"Kolejka jest pusta"]];
+            [[HUD sharedInstance] showMessageMainThread:[HUDMsg messageWithText:YTLPLocalizedString(@"Queue is empty")]];
         }
         return;
     }

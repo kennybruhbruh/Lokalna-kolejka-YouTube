@@ -3,6 +3,7 @@
 #import <objc/runtime.h>
 #import <objc/message.h>
 #import "LocalQueueManager.h"
+#import "YTLPLocalization.h"
 #import "Headers/YouTubeHeader/YTUIUtils.h"
 #import "Headers/YouTubeHeader/YTICommand.h"
 #import "Headers/YouTubeHeader/YTCoWatchWatchEndpointWrapperCommandHandler.h"
@@ -27,8 +28,8 @@ typedef NS_ENUM(NSInteger, YTLPQueueSection) {
 
 - (void)viewDidLoad {
     [super viewDidLoad];
-    self.title = @"Lokalna kolejka";
-    self.clearButton = [[UIBarButtonItem alloc] initWithTitle:@"Wyczyść" style:UIBarButtonItemStylePlain target:self action:@selector(clearQueue)];
+    self.title = YTLPLocalizedString(@"Local Queue");
+    self.clearButton = [[UIBarButtonItem alloc] initWithTitle:YTLPLocalizedString(@"Clear") style:UIBarButtonItemStylePlain target:self action:@selector(clearQueue)];
     UIBarButtonItem *doneButton = [[UIBarButtonItem alloc] initWithBarButtonSystemItem:UIBarButtonSystemItemDone target:self action:@selector(dismissController)];
     self.navigationItem.leftBarButtonItem = self.clearButton;
     self.navigationItem.rightBarButtonItems = @[doneButton, self.editButtonItem];
@@ -182,8 +183,8 @@ typedef NS_ENUM(NSInteger, YTLPQueueSection) {
     Class HUDMsg = objc_getClass("YTHUDMessage");
     if (HUD && HUDMsg) {
         NSString *message = (count > 0)
-            ? [NSString stringWithFormat:@"Usunięto z kolejki: %ld", (long)count]
-            : @"Kolejka jest pusta";
+            ? [NSString stringWithFormat:YTLPLocalizedString(@"Removed from queue: %ld"), (long)count]
+            : YTLPLocalizedString(@"Queue is empty");
         id hudInstance = ((id (*)(id, SEL))objc_msgSend)(HUD, sel_getUid("sharedInstance"));
         id hudMsg = ((id (*)(id, SEL, id))objc_msgSend)(HUDMsg, sel_getUid("messageWithText:"), message);
         if (hudInstance && hudMsg) {
@@ -208,9 +209,9 @@ typedef NS_ENUM(NSInteger, YTLPQueueSection) {
 
 - (NSString *)tableView:(UITableView *)tableView titleForHeaderInSection:(NSInteger)section {
     if (section == YTLPQueueSectionNowPlaying) {
-        return [YTLPLocalQueueManager.shared currentlyPlayingItem] ? @"Teraz odtwarzane" : nil;
+        return [YTLPLocalQueueManager.shared currentlyPlayingItem] ? YTLPLocalizedString(@"Now Playing") : nil;
     } else {
-        return [YTLPLocalQueueManager.shared allItems].count > 0 ? @"Następne" : nil;
+        return [YTLPLocalQueueManager.shared allItems].count > 0 ? YTLPLocalizedString(@"Up Next") : nil;
     }
 }
 
@@ -257,9 +258,9 @@ typedef NS_ENUM(NSInteger, YTLPQueueSection) {
     NSString *videoId = item[@"videoId"] ?: @"";
     NSString *channelName = item[@"channelName"] ?: @"";
 
-    cell.textLabel.text = title.length > 0 ? title : @"Ładowanie...";
+    cell.textLabel.text = title.length > 0 ? title : YTLPLocalizedString(@"Loading...");
     if (isNowPlaying) {
-        cell.detailTextLabel.text = @"Odtwarzane teraz";
+        cell.detailTextLabel.text = YTLPLocalizedString(@"Playing now");
         cell.detailTextLabel.textColor = [UIColor systemRedColor];
     } else {
         cell.detailTextLabel.text = channelName.length > 0 ? channelName : @"";
@@ -284,7 +285,7 @@ typedef NS_ENUM(NSInteger, YTLPQueueSection) {
 
                     UITableViewCell *updateCell = [tableView cellForRowAtIndexPath:indexPath];
                     if (updateCell) {
-                        updateCell.textLabel.text = finalTitle.length > 0 ? finalTitle : [NSString stringWithFormat:@"Film %@", capturedVideoId];
+                        updateCell.textLabel.text = finalTitle.length > 0 ? finalTitle : [NSString stringWithFormat:YTLPLocalizedString(@"Video %@"), capturedVideoId];
                         if (!capturedIsNowPlaying) {
                             updateCell.detailTextLabel.text = fetchedChannel ?: @"";
                         }
@@ -292,7 +293,7 @@ typedef NS_ENUM(NSInteger, YTLPQueueSection) {
                 } else {
                     UITableViewCell *updateCell = [tableView cellForRowAtIndexPath:indexPath];
                     if (updateCell && capturedTitle.length == 0) {
-                        updateCell.textLabel.text = [NSString stringWithFormat:@"Film %@", capturedVideoId];
+                        updateCell.textLabel.text = [NSString stringWithFormat:YTLPLocalizedString(@"Video %@"), capturedVideoId];
                     }
                 }
             });
