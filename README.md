@@ -1,3 +1,5 @@
+**Polski** | [English](README.en.md)
+
 # Lokalna kolejka YouTube
 
 Tweak do YouTube, który tworzy lokalną kolejkę filmów i działa także w LiveContainer oraz w IPA z wstrzykniętym dylibem.
