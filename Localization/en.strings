@@ -1,0 +1,42 @@
+/* English (source) strings. Do not translate this file: copy it to <language>.strings
+   (see TRANSLATING.md). Regenerate with: python3 tools/translations.py extract */
+
+/* ---- Settings.xm ---- */
+"Auto advance" = "Auto advance";
+"Automatically play next item from local queue when video ends" = "Automatically play next item from local queue when video ends";
+"Show Play Next button" = "Show Play Next button";
+"Show the Play Next button in the video player overlay" = "Show the Play Next button in the video player overlay";
+"Show Queue button" = "Show Queue button";
+"Show the Queue button in the video player overlay" = "Show the Queue button in the video player overlay";
+"Diagnostics: copy menu data on error" = "Diagnostics: copy menu data on error";
+"When a video can't be determined while adding to the queue, copy the menu data to the clipboard (for bug reports)" = "When a video can't be determined while adding to the queue, copy the menu data to the clipboard (for bug reports)";
+"Open Local Queue" = "Open Local Queue";
+"Clear Local Queue" = "Clear Local Queue";
+"Removed from queue: %ld" = "Removed from queue: %ld";
+"Queue is empty" = "Queue is empty";
+"Version %@" = "Version %@";
+"Local Queue" = "Local Queue";
+
+/* ---- Tweak.xm ---- */
+"✓ Queue complete" = "✓ Queue complete";
+"⚠ Navigation failed, video re-added" = "⚠ Navigation failed, video re-added";
+"▶ %@ (%ld more)" = "▶ %@ (%ld more)";
+"▶ %@ (last)" = "▶ %@ (last)";
+/* NOT UI text. YouTube's own label(s) for its "add to queue" menu action in YOUR language,
+   lowercase, separated by | . The tweak uses it to find and replace that menu entry. */
+"ytlp.native-queue-action-titles" = "add to queue|play next in queue";
+"Add to Local Queue" = "Add to Local Queue";
+"✅ Added: %@" = "✅ Added: %@";
+"✅ Added to queue" = "✅ Added to queue";
+"❌ Could not determine the video (menu data copied to clipboard)" = "❌ Could not determine the video (menu data copied to clipboard)";
+"❌ Could not determine the video" = "❌ Could not determine the video";
+"Next from queue" = "Next from queue";
+"❌ Could not add video" = "❌ Could not add video";
+
+/* ---- LocalQueueViewController.m ---- */
+"Clear" = "Clear";
+"Now Playing" = "Now Playing";
+"Up Next" = "Up Next";
+"Loading..." = "Loading...";
+"Playing now" = "Playing now";
+"Video %@" = "Video %@";
